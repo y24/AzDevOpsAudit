@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import inquirer
 import requests
 from dotenv import load_dotenv
 
@@ -37,7 +38,13 @@ class DevOpsAuth:
     def _get_organization_from_user(self):
         """ユーザーから組織名を取得します。"""
         while True:
-            org = input("Azure DevOps組織名を入力してください: ")
+            questions = [
+                inquirer.Text('organization',
+                            message='Azure DevOps組織名を入力してください')
+            ]
+            answers = inquirer.prompt(questions)
+            org = answers['organization']
+            
             if self._validate_organization(org):
                 return org
             print("無効な組織名です。再度入力してください。")
@@ -68,7 +75,14 @@ class DevOpsAuth:
     def _get_pat_from_user(self):
         """ユーザーからPATを取得し、検証します。"""
         while True:
-            pat = input("Azure DevOps Personal Access Tokenを入力してください: ")
+            questions = [
+                inquirer.Password('pat',
+                                message='Azure DevOps Personal Access Tokenを入力してください',
+                                validate=lambda _, x: len(x) > 0)
+            ]
+            answers = inquirer.prompt(questions)
+            pat = answers['pat']
+            
             if self._validate_pat(pat):
                 # 検証成功したらPATを環境変数に保存
                 with open('.env', 'a') as f:
@@ -79,7 +93,6 @@ class DevOpsAuth:
     def _validate_pat(self, pat):
         """PATの有効性を検証します。"""
         headers = self._create_headers(pat)
-        # Azure DevOps APIの簡単なエンドポイントを呼び出してテスト
         try:
             response = requests.get(
                 "https://dev.azure.com/_apis/projects?api-version=7.0",

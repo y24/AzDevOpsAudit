@@ -1,5 +1,6 @@
 import os
 import json
+import inquirer
 from typing import List, Dict, Optional
 
 class ConfigManager:
@@ -17,18 +18,15 @@ class ConfigManager:
         if not config_files:
             raise FileNotFoundError("設定ファイルが見つかりません。configsディレクトリにJSONファイルを配置してください。")
 
-        print("\n利用可能な設定ファイル:")
-        for i, file in enumerate(config_files, 1):
-            print(f"{i}. {file}")
+        questions = [
+            inquirer.List('config_file',
+                         message='使用する設定ファイルを選択してください',
+                         choices=config_files,
+                         carousel=True)  # 最後の項目から最初の項目に循環できるようにする
+        ]
 
-        while True:
-            try:
-                selection = int(input("\n使用する設定ファイルの番号を入力してください: "))
-                if 1 <= selection <= len(config_files):
-                    return config_files[selection - 1]
-                print("無効な選択です。")
-            except ValueError:
-                print("数字を入力してください。")
+        answers = inquirer.prompt(questions)
+        return answers['config_file']
 
     def load_config(self, config_file: Optional[str] = None) -> Dict:
         """設定ファイルを読み込みます。"""
