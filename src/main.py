@@ -6,6 +6,7 @@ from auth import DevOpsAuth
 from config import ConfigManager
 from workitem import WorkItemManager
 from pullrequest import PullRequestManager
+from commit_diff import CommitDiffManager
 
 def setup_logging():
     """ロギングの設定を行います。"""
@@ -23,7 +24,7 @@ def setup_logging():
         ]
     )
 
-def save_results(summary: dict, all_prs: list):
+def save_results(summary: dict, all_prs: list, commit_diffs: dict):
     """結果をファイルに保存します。"""
     results_dir = "results"
     os.makedirs(results_dir, exist_ok=True)
@@ -39,6 +40,11 @@ def save_results(summary: dict, all_prs: list):
     pr_details_file = os.path.join(results_dir, f"pr_details_{timestamp}.json")
     with open(pr_details_file, 'w', encoding='utf-8') as f:
         json.dump(all_prs, f, indent=2, ensure_ascii=False)
+
+    # コミット差分の詳細を保存
+    commit_diff_file = os.path.join(results_dir, f"commit_diffs_{timestamp}.json")
+    with open(commit_diff_file, 'w', encoding='utf-8') as f:
+        json.dump(commit_diffs, f, indent=2, ensure_ascii=False)
 
 def main():
     """メイン処理を実行します。"""
@@ -66,9 +72,13 @@ def main():
         # PullRequestManagerの初期化
         pr_manager = PullRequestManager(organization, headers)
         
-        # 各WorkItemのPull Request情報を収集
+        # CommitDiffManagerの初期化
+        commit_diff_manager = CommitDiffManager(organization, headers)
+        
+        # 各WorkItemのPull Request情報とコミット差分を収集
         all_prs = []
         pr_info_list = []
+        commit_diffs = {}
         
         for work_item_id in work_item_ids:
             # WorkItemのプロジェクトを取得
@@ -85,12 +95,32 @@ def main():
                             'work_item_id': work_item_id,
                             'pull_request': pr_details
                         })
+                        
+                        # コミット差分の取得
+                        repository = pr_details.get('repository', {}).get('name')
+                        if repository:
+                            try:
+                                diff_stats = commit_diff_manager.get_commit_diff_stats_classified(
+                                    project=project,
+                                    repository=repository,
+                                    base_commit=pr_details.get('lastMergeSourceCommit', {}).get('commitId'),
+                                    target_commit=pr_details.get('lastMergeTargetCommit', {}).get('commitId'),
+                                    exclude_dirs=config.get('exclude_dirs', [])
+                                )
+                                commit_diffs[f"{work_item_id}_{pr_id}"] = {
+                                    'work_item_id': work_item_id,
+                                    'pr_id': pr_id,
+                                    'repository': repository,
+                                    'diff_stats': diff_stats
+                                }
+                            except Exception as e:
+                                logger.error(f"コミット差分の取得に失敗しました - WorkItem: {work_item_id}, PR: {pr_id}: {str(e)}")
         
         # 情報をまとめる
         summary = pr_manager.summarize_pr_info(pr_info_list)
         
         # 結果を保存
-        save_results(summary, all_prs)
+        save_results(summary, all_prs, commit_diffs)
         logger.info("処理が完了しました。")
         
     except Exception as e:
