@@ -50,34 +50,33 @@ def main():
         # 認証情報の取得
         auth = DevOpsAuth()
         headers = auth.get_auth_headers()
+        organization = auth.get_organization()
         
         # 設定の読み込み
         config_manager = ConfigManager()
         config = config_manager.load_config()
         
-        # Azure DevOpsの組織とプロジェクトの設定
-        organization = input("Azure DevOps組織名を入力してください: ")
-        project = input("プロジェクト名を入力してください: ")
-        
         # WorkItemManagerの初期化
-        work_item_manager = WorkItemManager(organization, project, headers)
+        work_item_manager = WorkItemManager(organization, headers)
         
         # 処理対象のWorkItemを取得
         work_item_ids = work_item_manager.get_all_related_work_items(config)
         logger.info(f"処理対象のWorkItem数: {len(work_item_ids)}")
         
         # PullRequestManagerの初期化
-        pr_manager = PullRequestManager(organization, project, headers)
+        pr_manager = PullRequestManager(organization, headers)
         
         # 各WorkItemのPull Request情報を収集
         all_prs = []
         pr_info_list = []
         
         for work_item_id in work_item_ids:
+            # WorkItemのプロジェクトを取得
+            project, _ = work_item_manager.get_project_and_base_url(work_item_id)
             pr_ids = work_item_manager.get_pull_request_ids(work_item_id)
             
             for pr_id in pr_ids:
-                pr_details = pr_manager.get_pull_request_details(pr_id)
+                pr_details = pr_manager.get_pull_request_details(project, pr_id)
                 if pr_details:
                     pr_info = pr_manager.extract_pr_info(pr_details)
                     if pr_info:  # abandonedでない場合のみ追加

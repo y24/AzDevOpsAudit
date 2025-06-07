@@ -1,22 +1,48 @@
 import logging
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
 import requests
 
 class WorkItemManager:
-    def __init__(self, organization: str, project: str, headers: Dict):
+    def __init__(self, organization: str, headers: Dict):
         self.organization = organization
-        self.project = project
         self.headers = headers
-        self.base_url = f"https://dev.azure.com/{organization}/{project}/_apis"
         self.logger = logging.getLogger(__name__)
+        self.project_cache = {}
+
+    def get_work_item_project(self, work_item_id: int) -> str:
+        """WorkItemが属するプロジェクト名を取得します。"""
+        try:
+            url = f"https://dev.azure.com/{self.organization}/_apis/wit/workitems/{work_item_id}?$select=System.TeamProject&api-version=7.0"
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status()
+            return response.json()['fields']['System.TeamProject']
+        except Exception as e:
+            self.logger.error(f"WorkItem {work_item_id}のプロジェクト情報取得に失敗: {str(e)}")
+            return None
+
+    def get_project_and_base_url(self, work_item_id: int) -> Tuple[str, str]:
+        """WorkItemのプロジェクトとベースURLを取得します。"""
+        if work_item_id in self.project_cache:
+            project = self.project_cache[work_item_id]
+        else:
+            project = self.get_work_item_project(work_item_id)
+            if not project:
+                raise ValueError(f"WorkItem {work_item_id}のプロジェクト情報を取得できませんでした。")
+            self.project_cache[work_item_id] = project
+
+        base_url = f"https://dev.azure.com/{self.organization}/{project}/_apis"
+        return project, base_url
 
     def get_child_work_items(self, parent_ids: List[int]) -> Set[int]:
         """親WorkItemの子WorkItemのIDを取得します。"""
         child_ids = set()
         for parent_id in parent_ids:
             try:
+                # プロジェクト情報を取得
+                _, base_url = self.get_project_and_base_url(parent_id)
+                
                 # 関係を取得
-                url = f"{self.base_url}/wit/workitems/{parent_id}?$expand=relations&api-version=7.0"
+                url = f"{base_url}/wit/workitems/{parent_id}?$expand=relations&api-version=7.0"
                 response = requests.get(url, headers=self.headers)
                 response.raise_for_status()
                 
@@ -58,7 +84,8 @@ class WorkItemManager:
     def get_work_item_details(self, work_item_id: int) -> Dict:
         """WorkItemの詳細情報を取得します。"""
         try:
-            url = f"{self.base_url}/wit/workitems/{work_item_id}?$expand=relations&api-version=7.0"
+            _, base_url = self.get_project_and_base_url(work_item_id)
+            url = f"{base_url}/wit/workitems/{work_item_id}?$expand=relations&api-version=7.0"
             response = requests.get(url, headers=self.headers)
             response.raise_for_status()
             return response.json()

@@ -4,17 +4,15 @@ from datetime import datetime
 import requests
 
 class PullRequestManager:
-    def __init__(self, organization: str, project: str, headers: Dict):
+    def __init__(self, organization: str, headers: Dict):
         self.organization = organization
-        self.project = project
         self.headers = headers
-        self.base_url = f"https://dev.azure.com/{organization}/{project}/_apis"
         self.logger = logging.getLogger(__name__)
 
-    def get_pull_request_details(self, pr_id: int) -> Optional[Dict]:
+    def get_pull_request_details(self, project: str, pr_id: int) -> Optional[Dict]:
         """Pull Requestの詳細情報を取得します。"""
         try:
-            url = f"{self.base_url}/git/pullrequests/{pr_id}?api-version=7.0"
+            url = f"https://dev.azure.com/{self.organization}/{project}/_apis/git/pullrequests/{pr_id}?api-version=7.0"
             response = requests.get(url, headers=self.headers)
             response.raise_for_status()
             return response.json()

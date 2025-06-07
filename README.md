@@ -8,6 +8,7 @@
 - Pull Request情報の収集と集計
 - リポジトリ、ブランチ、コミット情報のサマリー生成
 - レビュワー情報の収集
+- プロジェクト情報の自動取得
 
 ## 必要条件
 
@@ -31,8 +32,16 @@ pip install -r requirements.txt
 
 ## 設定ファイル
 
-`configs`ディレクトリに、以下の形式のJSONファイルを配置します：
+1. ユーザー共通設定 (`user_config.json`):
+```json
+{
+    "organization": "your-organization"
+}
+```
+- 初回実行時に自動生成されます
+- `organization`: Azure DevOps組織名
 
+2. 監査設定 (`configs/`ディレクトリ内のJSONファイル):
 ```json
 {
     "parent_feature_ids": "12345,12346",
@@ -55,10 +64,11 @@ python src/main.py
 ```
 
 2. プロンプトに従って以下の情報を入力:
-- Azure DevOps組織名
-- プロジェクト名
 - Personal Access Token（環境変数未設定の場合）
+- Azure DevOps組織名（`user_config.json`未設定の場合）
 - 使用する設定ファイル
+
+注: プロジェクト名は、WorkItemのIDから自動的に取得されます。
 
 ## 出力
 
