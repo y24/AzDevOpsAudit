@@ -1,0 +1,6 @@
+{
+    "parent_feature_ids": "12345,12346",
+    "backlog_ids": "23456,23457",
+    "ignore_ids": "34567",
+    "is_only_completed_item": true
+} 
