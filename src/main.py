@@ -53,8 +53,9 @@ def main():
     logger = logging.getLogger(__name__)
     
     try:
-        # 認証情報の取得
+        # 認証情報の取得と検証
         auth = DevOpsAuth()
+        auth.setup_and_validate_connection()
         headers = auth.get_auth_headers()
         organization = auth.get_organization()
         
