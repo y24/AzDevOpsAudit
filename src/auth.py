@@ -105,7 +105,7 @@ class DevOpsAuth:
     def _create_headers(self, pat):
         """認証ヘッダーを生成します。"""
         if not self.headers:
-            auth_string = base64.b64encode(f":{pat}".encode()).decode()
+            auth_string = base64.b64encode(f":{pat}".encode('utf-8')).decode('utf-8')
             self.headers = {
                 'Authorization': f'Basic {auth_string}',
                 'Content-Type': 'application/json'
