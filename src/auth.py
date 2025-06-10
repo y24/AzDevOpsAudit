@@ -14,17 +14,39 @@ class DevOpsAuth:
         self._load_user_config()
 
     def _load_user_config(self):
-        """ユーザー設定を読み込みます。"""
+        """ユーザー設定を読み込みます。存在しない場合はdefault_config.jsonから作成します。"""
         try:
             with open('user_config.json', 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 self.organization = config.get('organization', '')
         except FileNotFoundError:
-            self.organization = ''
+            # user_config.jsonが存在しない場合、default_config.jsonから作成
+            try:
+                with open('default_config.json', 'r', encoding='utf-8') as f:
+                    default_config = json.load(f)
+            except FileNotFoundError:
+                raise FileNotFoundError("default_config.jsonが見つかりません。")
+            
+            # デフォルト設定でuser_config.jsonを作成
+            with open('user_config.json', 'w', encoding='utf-8') as f:
+                json.dump(default_config, f, indent=4, ensure_ascii=False)
+            self.organization = default_config.get('organization', '')
 
     def _save_user_config(self):
         """ユーザー設定を保存します。"""
-        config = {'organization': self.organization}
+        try:
+            with open('user_config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        except FileNotFoundError:
+            # user_config.jsonが存在しない場合、default_config.jsonから作成
+            try:
+                with open('default_config.json', 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            except FileNotFoundError:
+                raise FileNotFoundError("default_config.jsonが見つかりません。")
+        
+        config['organization'] = self.organization
+        
         with open('user_config.json', 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=4, ensure_ascii=False)
 
