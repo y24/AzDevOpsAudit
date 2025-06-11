@@ -1,3 +1,4 @@
-user_config.json
 logs/
 src/__pycache__/
+.env
+user_config.json
