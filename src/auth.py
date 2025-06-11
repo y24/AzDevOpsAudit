@@ -57,17 +57,29 @@ class DevOpsAuth:
         if not self.pat:
             self.pat = self._get_pat_from_user()
 
-        # 組織名の取得
+        # 組織名の取得（user_config.jsonから既に読み込まれている）
         if not self.organization:
+            print("user_config.jsonに組織名が設定されていません。")
             self.organization = self._get_organization_from_user()
             self._save_user_config()
 
         # 接続の検証
-        while not self._validate_connection():
-            print("接続に失敗しました。認証情報を再入力してください。")
+        validation_result = self._validate_connection()
+        while not validation_result['success']:
+            print("\n接続に失敗しました。")
+            print(f"エラーの詳細: {validation_result['error']}")
+            print("考えられる原因:")
+            for cause in validation_result['possible_causes']:
+                print(f"- {cause}")
+            print("\n認証情報を再入力してください。")
+            
             self.pat = self._get_pat_from_user()
-            self.organization = self._get_organization_from_user()
-            self._save_user_config()
+            print(f"\n現在の組織名: {self.organization}")
+            if input("組織名を変更しますか？(y/N): ").lower() == 'y':
+                self.organization = self._get_organization_from_user()
+                self._save_user_config()
+            
+            validation_result = self._validate_connection()
 
         # 検証成功後にヘッダーを設定
         self.headers = self._create_headers()
@@ -111,14 +123,72 @@ class DevOpsAuth:
     def _validate_connection(self):
         """組織への接続を検証します。"""
         headers = self._create_headers()
+        result = {
+            'success': False,
+            'error': '',
+            'possible_causes': []
+        }
+
         try:
             response = requests.get(
                 f"https://dev.azure.com/{self.organization}/_apis/projects?api-version=7.0",
                 headers=headers
             )
-            return response.status_code == 200
-        except requests.exceptions.RequestException:
-            return False
+
+            if response.status_code == 200:
+                result['success'] = True
+                return result
+
+            if response.status_code == 401:
+                result['error'] = "認証エラー (401 Unauthorized)"
+                result['possible_causes'] = [
+                    "Personal Access Token (PAT)が無効または期限切れ",
+                    "PATに必要な権限が付与されていない",
+                    "PATが正しく入力されていない"
+                ]
+            elif response.status_code == 403:
+                result['error'] = "アクセス権限エラー (403 Forbidden)"
+                result['possible_causes'] = [
+                    "PATに組織へのアクセス権限がない",
+                    "組織のセキュリティポリシーによりアクセスがブロックされている"
+                ]
+            elif response.status_code == 404:
+                result['error'] = "組織が見つかりません (404 Not Found)"
+                result['possible_causes'] = [
+                    "組織名が間違っている",
+                    "組織が存在しない",
+                    "組織名の大文字小文字が異なる"
+                ]
+            else:
+                result['error'] = f"APIエラー (Status Code: {response.status_code})"
+                try:
+                    error_detail = response.json().get('message', '')
+                    if error_detail:
+                        result['error'] += f" - {error_detail}"
+                except:
+                    pass
+                result['possible_causes'] = [
+                    "Azure DevOps APIに問題が発生している",
+                    "ネットワーク接続に問題がある",
+                    "組織の設定に問題がある"
+                ]
+
+        except requests.exceptions.ConnectionError:
+            result['error'] = "接続エラー"
+            result['possible_causes'] = [
+                "インターネット接続が切断されている",
+                "プロキシ設定が必要",
+                "Azure DevOpsのサービスが利用できない"
+            ]
+        except requests.exceptions.RequestException as e:
+            result['error'] = f"リクエストエラー: {str(e)}"
+            result['possible_causes'] = [
+                "ネットワーク接続に問題がある",
+                "SSL/TLS証明書の問題がある",
+                "タイムアウトが発生した"
+            ]
+
+        return result
 
     def _create_headers(self):
         """認証ヘッダーを生成します。"""
