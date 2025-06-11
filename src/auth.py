@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import getpass
 import inquirer
 import requests
 from dotenv import load_dotenv
@@ -107,14 +108,13 @@ class DevOpsAuth:
 
     def _get_pat_from_user(self):
         """ユーザーからPATを取得します。"""
-        questions = [
-            inquirer.Password('pat',
-                            message='Azure DevOps Personal Access Tokenを入力してください',
-                            validate=lambda _, x: len(x) > 0)
-        ]
-        answers = inquirer.prompt(questions)
-        pat = answers['pat']
-        
+        print("Azure DevOps Personal Access Tokenを入力してください")
+        while True:
+            pat = getpass.getpass()
+            if pat.strip():  # 空でないことを確認
+                break
+            print("PATを入力してください。")
+
         # 新しいPATを環境変数ファイルに保存
         with open('.env', 'a') as f:
             f.write(f'\nDEVOPS_PAT={pat}')
