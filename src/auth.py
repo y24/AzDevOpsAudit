@@ -110,7 +110,7 @@ class DevOpsAuth:
         """ユーザーからPATを取得します。"""
         print("Azure DevOps Personal Access Tokenを入力してください")
         while True:
-            pat = getpass.getpass()
+            pat = getpass.getpass(prompt='PAT: ')
             if pat.strip():  # 空でないことを確認
                 break
             print("PATを入力してください。")
