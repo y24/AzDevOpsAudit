@@ -135,6 +135,17 @@ class DevOpsAuth:
                 headers=headers
             )
 
+            # デバッグ情報の出力
+            print(f"\nデバッグ情報:")
+            print(f"URL: https://dev.azure.com/{self.organization}/_apis/projects?api-version=7.0")
+            print(f"ステータスコード: {response.status_code}")
+            print(f"レスポンスヘッダー: {response.headers}")
+            try:
+                print(f"レスポンス本文: {response.json()}")
+            except:
+                print(f"レスポンス本文: {response.text}")
+            print("\n")
+
             if response.status_code == 200:
                 result['success'] = True
                 return result
