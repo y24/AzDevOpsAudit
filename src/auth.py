@@ -130,14 +130,10 @@ class DevOpsAuth:
         }
 
         try:
-            # Work Items APIを使用して接続を検証（最新の1件のWork Itemを取得）
-            wiql_query = {
-                "query": "Select [System.Id] From WorkItems Where [System.WorkItemType] <> '' Order By [System.CreatedDate] Desc"
-            }
-            response = requests.post(
-                f"https://dev.azure.com/{self.organization}/_apis/wit/wiql?api-version=7.0",
-                headers=headers,
-                json=wiql_query
+            # Work Item Types APIを使用して接続を検証
+            response = requests.get(
+                f"https://dev.azure.com/{self.organization}/_apis/wit/workitemtypes?api-version=7.0",
+                headers=headers
             )
 
             if response.status_code == 200:
