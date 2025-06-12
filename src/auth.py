@@ -130,8 +130,9 @@ class DevOpsAuth:
         }
 
         try:
+            # Work Items APIを使用して接続を検証
             response = requests.get(
-                f"https://dev.azure.com/{self.organization}/_apis/projects?api-version=7.0",
+                f"https://dev.azure.com/{self.organization}/_apis/wit/wiql?api-version=7.0",
                 headers=headers
             )
 
@@ -143,7 +144,7 @@ class DevOpsAuth:
                 result['error'] = "認証エラー (401 Unauthorized)"
                 result['possible_causes'] = [
                     "Personal Access Token (PAT)が無効または期限切れ",
-                    "PATに必要な権限が付与されていない",
+                    "PATに必要な権限（Work Items - Read）が付与されていない",
                     "PATが正しく入力されていない"
                 ]
             elif response.status_code == 403:
