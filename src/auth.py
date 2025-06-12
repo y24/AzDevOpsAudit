@@ -130,10 +130,14 @@ class DevOpsAuth:
         }
 
         try:
-            # Work Items APIを使用して接続を検証
-            response = requests.get(
+            # Work Items APIを使用して接続を検証（最新の1件のWork Itemを取得）
+            wiql_query = {
+                "query": "Select [System.Id] From WorkItems Where [System.WorkItemType] <> '' Order By [System.CreatedDate] Desc"
+            }
+            response = requests.post(
                 f"https://dev.azure.com/{self.organization}/_apis/wit/wiql?api-version=7.0",
-                headers=headers
+                headers=headers,
+                json=wiql_query
             )
 
             if response.status_code == 200:
@@ -159,6 +163,12 @@ class DevOpsAuth:
                     "組織名が間違っている",
                     "組織が存在しない",
                     "組織名の大文字小文字が異なる"
+                ]
+            elif response.status_code == 405:
+                result['error'] = "メソッドが許可されていません (405 Method Not Allowed)"
+                result['possible_causes'] = [
+                    "APIエンドポイントが変更された可能性がある",
+                    "APIバージョンが古い可能性がある"
                 ]
             else:
                 result['error'] = f"APIエラー (Status Code: {response.status_code})"
