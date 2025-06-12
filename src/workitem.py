@@ -63,31 +63,23 @@ class WorkItemManager:
         all_work_items = set()
         
         # Featureの子WorkItemを取得
-        self.logger.info(f"親Feature IDs: {config['parent_feature_ids']}")
         feature_children = self.get_child_work_items(config['parent_feature_ids'])
-        self.logger.info(f"親Featureの子WorkItem IDs: {feature_children}")
         all_work_items.update(feature_children)
         
         # 設定ファイルで指定されたBacklog IDsを追加
-        self.logger.info(f"設定ファイルのBacklog IDs: {config['backlog_ids']}")
         all_work_items.update(set(config['backlog_ids']))
         
         # これまでに集めたWorkItemの子WorkItemを取得
         current_items = list(all_work_items)
-        self.logger.info(f"子WorkItemを検索する対象のIDs: {current_items}")
         child_items = self.get_child_work_items(current_items)
-        self.logger.info(f"検出された子WorkItem IDs: {child_items}")
         all_work_items.update(child_items)
         
         # 親FeatureIDsも追加
-        self.logger.info(f"親Feature IDsを追加: {config['parent_feature_ids']}")
         all_work_items.update(set(config['parent_feature_ids']))
         
         # 除外IDsを削除
-        self.logger.info(f"除外する IDs: {config['ignore_ids']}")
         all_work_items = all_work_items - set(config['ignore_ids'])
         
-        self.logger.info(f"最終的な処理対象WorkItem IDs: {all_work_items}")
         return all_work_items
 
     def get_work_item_details(self, work_item_id: int) -> Dict:
@@ -95,7 +87,13 @@ class WorkItemManager:
         try:
             _, base_url = self.get_project_and_base_url(work_item_id)
             url = f"{base_url}/wit/workitems/{work_item_id}?$expand=relations&api-version=7.0"
+            self.logger.info(f"WorkItem {work_item_id} の詳細情報を取得中: {url}")
+            
             response = requests.get(url, headers=self.headers)
+            if response.status_code != 200:
+                self.logger.error(f"API呼び出しエラー - Status: {response.status_code}, Response: {response.text}")
+                return None
+                
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -105,14 +103,26 @@ class WorkItemManager:
     def get_pull_request_ids(self, work_item_id: int) -> List[int]:
         """WorkItemに関連付けられたPull RequestのIDを取得します。"""
         pr_ids = []
-        work_item = self.get_work_item_details(work_item_id)
+        self.logger.info(f"WorkItem {work_item_id} のPull Request情報を取得中...")
         
-        if not work_item or 'relations' not in work_item:
+        work_item = self.get_work_item_details(work_item_id)
+        if not work_item:
+            self.logger.warning(f"WorkItem {work_item_id} の詳細情報を取得できませんでした")
+            return pr_ids
+            
+        if 'relations' not in work_item:
+            self.logger.info(f"WorkItem {work_item_id} には関連情報がありません")
             return pr_ids
 
         for relation in work_item['relations']:
             if relation.get('rel') == 'ArtifactLink' and 'pullRequestId' in relation.get('attributes', {}):
                 pr_id = relation['attributes']['pullRequestId']
+                self.logger.info(f"WorkItem {work_item_id} に関連するPR {pr_id} を検出")
                 pr_ids.append(pr_id)
+
+        if not pr_ids:
+            self.logger.info(f"WorkItem {work_item_id} に関連するPRは見つかりませんでした")
+        else:
+            self.logger.info(f"WorkItem {work_item_id} に関連するPR: {pr_ids}")
 
         return pr_ids 
