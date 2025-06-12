@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
+from tqdm import tqdm
 from auth import DevOpsAuth
 from config import ConfigManager
 from workitem import WorkItemManager
@@ -81,41 +82,55 @@ def main():
         pr_info_list = []
         commit_diffs = {}
         
-        for work_item_id in work_item_ids:
-            # WorkItemのプロジェクトを取得
-            project, _ = work_item_manager.get_project_and_base_url(work_item_id)
-            pr_ids = work_item_manager.get_pull_request_ids(work_item_id)
-            
-            for pr_id in pr_ids:
-                pr_details = pr_manager.get_pull_request_details(project, pr_id)
-                if pr_details:
-                    pr_info = pr_manager.extract_pr_info(pr_details)
-                    if pr_info:  # abandonedでない場合のみ追加
-                        pr_info_list.append(pr_info)
-                        all_prs.append({
-                            'work_item_id': work_item_id,
-                            'pull_request': pr_details
-                        })
-                        
-                        # コミット差分の取得
-                        repository = pr_details.get('repository', {}).get('name')
-                        if repository:
-                            try:
-                                diff_stats = commit_diff_manager.get_commit_diff_stats_classified(
-                                    project=project,
-                                    repository=repository,
-                                    base_commit=pr_details.get('lastMergeSourceCommit', {}).get('commitId'),
-                                    target_commit=pr_details.get('lastMergeTargetCommit', {}).get('commitId'),
-                                    exclude_dirs=config.get('exclude_dirs', [])
-                                )
-                                commit_diffs[f"{work_item_id}_{pr_id}"] = {
-                                    'work_item_id': work_item_id,
-                                    'pr_id': pr_id,
-                                    'repository': repository,
-                                    'diff_stats': diff_stats
-                                }
-                            except Exception as e:
-                                logger.error(f"コミット差分の取得に失敗しました - WorkItem: {work_item_id}, PR: {pr_id}: {str(e)}")
+        # WorkItemのプログレスバー
+        with tqdm(total=len(work_item_ids), desc="WorkItem処理") as work_item_pbar:
+            for work_item_id in work_item_ids:
+                work_item_pbar.set_postfix_str(f"ID: {work_item_id}")
+                
+                # WorkItemのプロジェクトを取得
+                project, _ = work_item_manager.get_project_and_base_url(work_item_id)
+                pr_ids = work_item_manager.get_pull_request_ids(work_item_id)
+                
+                # Pull Requestのプログレスバー
+                if pr_ids:
+                    with tqdm(total=len(pr_ids), desc="  Pull Request処理", leave=False) as pr_pbar:
+                        for pr_id in pr_ids:
+                            pr_pbar.set_postfix_str(f"ID: {pr_id}")
+                            
+                            pr_details = pr_manager.get_pull_request_details(project, pr_id)
+                            if pr_details:
+                                pr_info = pr_manager.extract_pr_info(pr_details)
+                                if pr_info:  # abandonedでない場合のみ追加
+                                    pr_info_list.append(pr_info)
+                                    all_prs.append({
+                                        'work_item_id': work_item_id,
+                                        'pull_request': pr_details
+                                    })
+                                    
+                                    # コミット差分の取得
+                                    repository = pr_details.get('repository', {}).get('name')
+                                    if repository:
+                                        try:
+                                            pr_pbar.set_postfix_str(f"ID: {pr_id} - コミット差分取得中")
+                                            diff_stats = commit_diff_manager.get_commit_diff_stats_classified(
+                                                project=project,
+                                                repository=repository,
+                                                base_commit=pr_details.get('lastMergeSourceCommit', {}).get('commitId'),
+                                                target_commit=pr_details.get('lastMergeTargetCommit', {}).get('commitId'),
+                                                exclude_dirs=config.get('exclude_dirs', [])
+                                            )
+                                            commit_diffs[f"{work_item_id}_{pr_id}"] = {
+                                                'work_item_id': work_item_id,
+                                                'pr_id': pr_id,
+                                                'repository': repository,
+                                                'diff_stats': diff_stats
+                                            }
+                                        except Exception as e:
+                                            logger.error(f"コミット差分の取得に失敗しました - WorkItem: {work_item_id}, PR: {pr_id}: {str(e)}")
+                            
+                            pr_pbar.update(1)
+                
+                work_item_pbar.update(1)
         
         # 情報をまとめる
         summary = pr_manager.summarize_pr_info(pr_info_list)
