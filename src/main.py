@@ -3,6 +3,8 @@ import json
 import logging
 from datetime import datetime
 from tqdm import tqdm
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 from auth import DevOpsAuth
 from config import ConfigManager
 from workitem import WorkItemManager
@@ -68,7 +70,12 @@ def main():
         work_item_manager = WorkItemManager(organization, headers)
         
         # 処理対象のWorkItemを取得
-        work_item_ids = work_item_manager.get_all_related_work_items(config)
+        with yaspin(Spinners.dots, text="WorkItemを検索中...") as spinner:
+            work_item_ids = work_item_manager.get_all_related_work_items(config)
+            spinner.ok("✓")
+            spinner.text = f"WorkItemの検索が完了しました。"
+            spinner.write(f"処理対象のWorkItem数: {len(work_item_ids)}")
+
         logger.info(f"処理対象のWorkItem数: {len(work_item_ids)}")
         
         # PullRequestManagerの初期化
