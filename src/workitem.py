@@ -122,19 +122,13 @@ class WorkItemManager:
             self.logger.info(f"  属性: {relation.get('attributes')}")
 
             # Pull Request関連の情報を探す
-            # 方法1: ArtifactLinkとpullRequestId
-            if relation.get('rel') == 'ArtifactLink' and 'pullRequestId' in relation.get('attributes', {}):
-                pr_id = relation['attributes']['pullRequestId']
-                self.logger.info(f"  方法1でPR検出: {pr_id}")
-                pr_ids.append(pr_id)
-
-            # 方法2: Pull RequestのURLから抽出
-            url = relation.get('url', '')
-            if 'pullrequest' in url.lower():
+            # attributes.nameが"Pull Request"の場合
+            if relation.get('attributes', {}).get('name') == 'Pull Request':
+                url = relation.get('url', '')
                 try:
                     # URLからPR IDを抽出
                     pr_id = int(url.split('/')[-1])
-                    self.logger.info(f"  方法2でPR検出: {pr_id}")
+                    self.logger.info(f"  PR検出: {pr_id}")
                     if pr_id not in pr_ids:
                         pr_ids.append(pr_id)
                 except (ValueError, IndexError):
