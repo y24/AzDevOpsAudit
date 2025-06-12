@@ -48,8 +48,21 @@ class ConfigManager:
         except Exception as e:
             raise ValueError(f"設定ファイルの読み込みに失敗しました: {str(e)}")
 
-    def _parse_id_list(self, id_string: str) -> List[int]:
-        """カンマ区切りのID文字列をリストに変換します。"""
-        if not id_string:
+    def _parse_id_list(self, id_input: any) -> List[int]:
+        """ID文字列またはリストをintのリストに変換します。"""
+        if not id_input:
             return []
-        return [int(id.strip()) for id in str(id_string).split(',') if id.strip()] 
+        
+        # 既にリストの場合
+        if isinstance(id_input, list):
+            return [int(id) for id in id_input if str(id).strip()]
+        
+        # 文字列の場合
+        if isinstance(id_input, str):
+            return [int(id.strip()) for id in id_input.split(',') if id.strip()]
+        
+        # 数値の場合（単一のID）
+        if isinstance(id_input, (int, float)):
+            return [int(id_input)]
+        
+        raise ValueError(f"サポートされていないID形式です: {type(id_input)}") 

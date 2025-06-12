@@ -63,22 +63,31 @@ class WorkItemManager:
         all_work_items = set()
         
         # Featureの子WorkItemを取得
+        self.logger.info(f"親Feature IDs: {config['parent_feature_ids']}")
         feature_children = self.get_child_work_items(config['parent_feature_ids'])
+        self.logger.info(f"親Featureの子WorkItem IDs: {feature_children}")
         all_work_items.update(feature_children)
         
         # 設定ファイルで指定されたBacklog IDsを追加
+        self.logger.info(f"設定ファイルのBacklog IDs: {config['backlog_ids']}")
         all_work_items.update(set(config['backlog_ids']))
         
         # これまでに集めたWorkItemの子WorkItemを取得
-        child_items = self.get_child_work_items(list(all_work_items))
+        current_items = list(all_work_items)
+        self.logger.info(f"子WorkItemを検索する対象のIDs: {current_items}")
+        child_items = self.get_child_work_items(current_items)
+        self.logger.info(f"検出された子WorkItem IDs: {child_items}")
         all_work_items.update(child_items)
         
         # 親FeatureIDsも追加
+        self.logger.info(f"親Feature IDsを追加: {config['parent_feature_ids']}")
         all_work_items.update(set(config['parent_feature_ids']))
         
         # 除外IDsを削除
+        self.logger.info(f"除外する IDs: {config['ignore_ids']}")
         all_work_items = all_work_items - set(config['ignore_ids'])
         
+        self.logger.info(f"最終的な処理対象WorkItem IDs: {all_work_items}")
         return all_work_items
 
     def get_work_item_details(self, work_item_id: int) -> Dict:
