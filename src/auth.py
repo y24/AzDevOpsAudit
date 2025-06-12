@@ -97,9 +97,29 @@ class DevOpsAuth:
                 break
             print("PATを入力してください。")
 
-        # 新しいPATを環境変数ファイルに保存
-        with open('.env', 'a') as f:
-            f.write(f'\nDEVOPS_PAT={pat}')
+        # 既存の.envファイルの内容を読み込む
+        env_lines = []
+        pat_found = False
+        try:
+            with open('.env', 'r') as f:
+                for line in f:
+                    if line.startswith('DEVOPS_PAT='):
+                        # 既存のPATを新しい値で置き換え
+                        env_lines.append(f'DEVOPS_PAT={pat}\n')
+                        pat_found = True
+                    else:
+                        env_lines.append(line)
+        except FileNotFoundError:
+            pass
+
+        # PATが見つからなかった場合は新規追加
+        if not pat_found:
+            env_lines.append(f'DEVOPS_PAT={pat}\n')
+
+        # .envファイルを更新
+        with open('.env', 'w') as f:
+            f.writelines(env_lines)
+
         return pat
 
     def _create_headers(self):
