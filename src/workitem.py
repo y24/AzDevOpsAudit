@@ -67,7 +67,7 @@ class WorkItemManager:
         all_work_items.update(feature_children)
         
         # 設定ファイルで指定されたBacklog IDsを追加
-        all_work_items.update(set(config['backlog_ids']))
+        all_work_items.update(set(config['backlog_item_ids']))
         
         # これまでに集めたWorkItemの子WorkItemを取得
         current_items = list(all_work_items)

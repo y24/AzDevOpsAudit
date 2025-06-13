@@ -40,7 +40,7 @@ class ConfigManager:
 
             # 必要なフィールドの存在確認と型変換
             config['parent_feature_ids'] = self._parse_id_list(config.get('parent_feature_ids', ''))
-            config['backlog_ids'] = self._parse_id_list(config.get('backlog_ids', ''))
+            config['backlog_item_ids'] = self._parse_id_list(config.get('backlog_item_ids', ''))
             config['ignore_ids'] = self._parse_id_list(config.get('ignore_ids', ''))
             config['is_only_completed_item'] = bool(config.get('is_only_completed_item', False))
 

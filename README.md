@@ -46,14 +46,14 @@ pip install -r requirements.txt
 ```json
 {
     "parent_feature_ids": "12345,12346",
-    "backlog_ids": "23456,23457",
+    "backlog_item_ids": "23456,23457",
     "ignore_ids": "34567",
     "is_only_completed_item": true
 }
 ```
 
 - `parent_feature_ids`: 親となるFeatureのID（カンマ区切りで複数指定可能）
-- `backlog_ids`: 処理対象とするProductBacklogItemのID（カンマ区切りで複数指定可能）
+- `backlog_item_ids`: 処理対象とするProductBacklogItemのID（カンマ区切りで複数指定可能）
 - `ignore_ids`: 無視するWorkItemのID（カンマ区切りで複数指定可能）
 - `is_only_completed_item`: ステータスが完了のWorkItemのみを対象とするフラグ
 
