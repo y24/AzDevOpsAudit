@@ -139,4 +139,54 @@ class WorkItemManager:
         else:
             self.logger.info(f"WorkItem {work_item_id} に関連するPR: {pr_ids}")
 
-        return pr_ids 
+        return pr_ids
+
+    def query_work_items_by_wiql(self, project: str, wiql: str) -> Dict:
+        """WIQLクエリを使用してWorkItemを検索します。
+
+        Args:
+            project (str): プロジェクト名
+            wiql (str): WIQLクエリ文字列
+
+        Returns:
+            Dict: APIレスポンスのJSONデータ
+        """
+        try:
+            base_url = f"https://dev.azure.com/{self.organization}/{project}/_apis"
+            url = f"{base_url}/wit/wiql?api-version=7.0"
+            
+            payload = {
+                "query": wiql
+            }
+            
+            self.logger.info(f"WIQLクエリを実行中: {wiql}")
+            response = requests.post(url, headers=self.headers, json=payload)
+            response.raise_for_status()
+            
+            return response.json()
+        except Exception as e:
+            self.logger.error(f"WIQLクエリの実行に失敗: {str(e)}")
+            return None
+
+    def get_work_items_by_query_id(self, project: str, query_id: str) -> Dict:
+        """保存済みクエリのIDを使用してWorkItemを取得します。
+
+        Args:
+            project (str): プロジェクト名
+            query_id (str): クエリID
+
+        Returns:
+            Dict: APIレスポンスのJSONデータ
+        """
+        try:
+            base_url = f"https://dev.azure.com/{self.organization}/{project}/_apis"
+            url = f"{base_url}/wit/queries/{query_id}?api-version=7.0"
+            
+            self.logger.info(f"クエリID {query_id} を使用してWorkItemを取得中")
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status()
+            
+            return response.json()
+        except Exception as e:
+            self.logger.error(f"クエリID {query_id} によるWorkItem取得に失敗: {str(e)}")
+            return None 
